@@ -381,7 +381,7 @@ print("Actual time for full calculation:", actual_time_full, "seconds")
 ### (c)
 
 ```{python}
-
+#
 from pyproj import CRS
 
 # Read the .prj file content as a WKT string
