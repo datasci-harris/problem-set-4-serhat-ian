@@ -128,7 +128,8 @@ alt.Chart(unique_hospitals_per_year).mark_bar().encode(
 
 ## Identify hospital closures in POS file (15 pts) (*)
 
-##1
+## 1
+
 ```{python}
 active_2016 = pos2016[pos2016['PGM_TRMNTN_CD'] == 0]
 active_2017 = pos2017[pos2017['PGM_TRMNTN_CD'] == 0]
@@ -162,12 +163,14 @@ closed_hospitals = active_2016_only.dropna(subset=['Year_Closed']).reset_index(d
 print(f"Number of suspected hospital closures: {len(closed_hospitals)}")
 ```
 
-##2
+## 2
+
 ```{python}
 print(closed_hospitals[['FAC_NAME', 'PRVDR_NUM', 'ZIP_CD', 'Year_Closed']].sort_values(by="FAC_NAME").head(10))
 
 ```
-#3
+
+## 3
 
 ```{python}
 def is_merger_or_acquisition(zip_code, closure_year):
@@ -198,14 +201,75 @@ closed_hospitals['Is_Merger'] = closed_hospitals.apply(
 mergers = closed_hospitals[closed_hospitals['Is_Merger']]
 corrected_closures = closed_hospitals[~closed_hospitals['Is_Merger']].reset_index(drop=True)
 
-
+#a
 print(f"Number of potential mergers/acquisitions: {len(mergers)}")
 
-
+#b
 print(f"Number of corrected hospital closures: {len(corrected_closures)}")
 
-
+#c
 sorted_closures = corrected_closures.sort_values('FAC_NAME').reset_index(drop=True)
 print(sorted_closures[['FAC_NAME', 'PRVDR_NUM', 'ZIP_CD', 'Year_Closed']].head(10))
+
+```
+
+# Download Census zip code shapefile (10 pt)
+
+## 1.
+
+| **File Type** | **Description** | **Typical File Size** |
+|----------------|-------------------------------------|--------------------|
+| **`.dbf`** | Stores tabular data with attributes for each feature. | Varies, but typically small (KBs to a few MBs). |
+| **`.prj`** | Contains projection information for aligning the map. | Very small (usually a few KBs). |
+| **`.shp`** | Holds geometry (points, lines, polygons) of the features. | Can be large (depends on data complexity, MBs to GBs). |
+| **`.shx`** | An index file for quick access to shapes in the `.shp` file. | Small (usually a few KBs). |
+| **`.xml`** | Metadata file with extra information about the dataset. | Small (a few KBs). |
+
+## 2.
+
+```{python}
+
+import geopandas as gpd
+import altair as alt
+import matplotlib.pyplot as plt
+
+
+shapefile_path = r"C:\Users\shefo\GitHub\problem-set-4-serhat-ian\gz_2010_us_860_00_500k.shp"
+zip_gdf = gpd.read_file(shapefile_path)
+
+zip_gdf["ZCTA5"] = zip_gdf["ZCTA5"].astype(str)  
+
+
+texas_zip_gdf = zip_gdf[zip_gdf["ZCTA5"].str.startswith(("75", "76", "77", "78", "79"))]
+
+
+texas_hospitals = pos2016[pos2016["ZIP_CD"].str.startswith(("75", "76", "77", "78", "79"))]
+
+
+hospital_counts = texas_hospitals.groupby("ZIP_CD").size().reset_index(name="Hospital_Count")
+
+
+
+merged_gdf = texas_zip_gdf.merge(hospital_counts, left_on="ZCTA5", right_on="ZIP_CD", how="left")
+
+merged_gdf["Hospital_Count"] = merged_gdf["Hospital_Count"].fillna(0)
+#I got a very weird map with so many blank areas. So I asked to ChatGPT what was the problem. It said this problem could arise from the NA values in hospital count column, so added the code line above to solve this. 
+
+fig, ax = plt.subplots(figsize=(10, 8)) 
+
+merged_gdf.plot(
+    column="Hospital_Count",  
+    cmap="Reds",              
+    linewidth=0.8,             
+    edgecolor="gray",          
+    legend=True,               
+    legend_kwds={"label": "Hospital Count"},  
+    ax=ax                      
+)
+
+ax.set_title("Number of Short Term Hospitals by Zip Code in Texas (2016)", fontsize=15)
+ax.axis("off") 
+
+plt.show()
 
 ```
