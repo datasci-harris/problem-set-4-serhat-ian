@@ -125,3 +125,87 @@ alt.Chart(unique_hospitals_per_year).mark_bar().encode(
    )
 ```
 
+
+## Identify hospital closures in POS file (15 pts) (*)
+
+##1
+```{python}
+active_2016 = pos2016[pos2016['PGM_TRMNTN_CD'] == 0]
+active_2017 = pos2017[pos2017['PGM_TRMNTN_CD'] == 0]
+active_2018 = pos2018[pos2018['PGM_TRMNTN_CD'] == 0]
+active_2019 = pos2019[pos2019['PGM_TRMNTN_CD'] == 0]
+
+def provider_in_year(df, provider_num):
+    row = df[df['PRVDR_NUM'] == provider_num]
+    return not row.empty and row['PGM_TRMNTN_CD'].values[0] == 0
+
+
+def determine_closure_year(provider_num):
+ 
+    if not provider_in_year(active_2017, provider_num):
+        return 2017
+    elif not provider_in_year(active_2018, provider_num):
+        return 2018
+    elif not provider_in_year(active_2019, provider_num):
+        return 2019
+    return None  
+
+active_2016_only = active_2016[active_2016['PGM_TRMNTN_CD'] == 0]
+
+
+active_2016_only['Year_Closed'] = active_2016_only['PRVDR_NUM'].apply(determine_closure_year)
+
+
+closed_hospitals = active_2016_only.dropna(subset=['Year_Closed']).reset_index(drop=True)
+
+
+print(f"Number of suspected hospital closures: {len(closed_hospitals)}")
+```
+
+##2
+```{python}
+print(closed_hospitals[['FAC_NAME', 'PRVDR_NUM', 'ZIP_CD', 'Year_Closed']].sort_values(by="FAC_NAME").head(10))
+
+```
+#3
+
+```{python}
+def is_merger_or_acquisition(zip_code, closure_year):
+    
+    closure_year = int(closure_year)
+    
+    active_current_year = globals()[f'active_{closure_year}']
+    num_active_current = len(active_current_year[(active_current_year['ZIP_CD'] == zip_code) &
+                                                 (active_current_year['PGM_TRMNTN_CD'] == 0)])
+
+    # Count active hospitals in the ZIP code for the year following closure
+    next_year = closure_year + 1
+    if next_year <= 2019:
+        active_next_year = globals()[f'active_{next_year}']
+        num_active_next = len(active_next_year[(active_next_year['ZIP_CD'] == zip_code) &
+                                               (active_next_year['PGM_TRMNTN_CD'] == 0)])
+    else:
+        num_active_next = 0  # No data beyond 2019
+
+    # Merger/acquisition if the number of active hospitals does not decrease
+    return num_active_next >= num_active_current
+
+
+closed_hospitals['Is_Merger'] = closed_hospitals.apply(
+    lambda row: is_merger_or_acquisition(row['ZIP_CD'], row['Year_Closed']), axis=1
+)
+
+mergers = closed_hospitals[closed_hospitals['Is_Merger']]
+corrected_closures = closed_hospitals[~closed_hospitals['Is_Merger']].reset_index(drop=True)
+
+
+print(f"Number of potential mergers/acquisitions: {len(mergers)}")
+
+
+print(f"Number of corrected hospital closures: {len(corrected_closures)}")
+
+
+sorted_closures = corrected_closures.sort_values('FAC_NAME').reset_index(drop=True)
+print(sorted_closures[['FAC_NAME', 'PRVDR_NUM', 'ZIP_CD', 'Year_Closed']].head(10))
+
+```
