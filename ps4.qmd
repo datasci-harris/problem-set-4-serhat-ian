@@ -1,0 +1,127 @@
+---
+title: "Your Title"
+format: 
+  pdf:
+    keep-tex: true
+    # Use only necessary LaTeX packages and configurations
+    include-in-header: 
+       text: |
+         \usepackage{fvextra}
+         \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+# Set global execution options for Quarto
+execute:
+  echo: true
+  eval: true
+  warning: false
+  message: false
+include-before-body:
+  text: |
+    \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
+      showspaces=false,
+      showtabs=false,
+      breaklines
+    }
+---
+
+**PS4:** Due Sat Nov 2 at 5:00PM Central. Worth 100 points.
+
+## Style Points (10 pts)
+
+## Submission Steps (10 pts)
+
+# Download and explore the Provider of Services (POS) file (10 pts)
+
+1.  
+
+| Variable | Definition |
+|--------------------|:--------------------------------------------------------|
+| PRVDR_CTGRY_SBTYP_CD | Identifies the subtype of the provider, within the primary category. Used to show the breakdown of provider categories, mainly for hospitals and SNFs. |
+| PRVDR_CTGRY_CD | Identifies the type of provider participating in the Medicare/Medicaid program. |
+| FAC_NAME | Name of the provider certified to participate in the Medicare and/or Medicaid programs. |
+| PRVDR_NUM | Six or ten position identification number assigned to a certified provider (CMS Certification Number). |
+| PGM_TRMNTN_CD | Indicates the current termination status for the provider. |
+| ZIP_CD | Five-digit ZIP code for a provider's physical address. |
+
+## 2.
+
+### (a)
+
+```{python}
+
+import pandas as pd
+file_path = (r'C:\\Users\\shefo\\GitHub\\problem-set-4-serhat-ian\\pos2016.csv')
+df = pd.read_csv(file_path)
+pos2016  = df[(df["PRVDR_CTGRY_SBTYP_CD"]==1) & (df["PRVDR_CTGRY_CD"]==1)]
+
+    
+```
+
+The number of short term hospital in the filtered data.
+
+```{python}
+len(pos2016)
+```
+
+### (b)
+
+There are 7245 short term hospital in the data. However, the article provided in the problem set claims there were 5000. This difference could be arised from the authors" choice which type of short term hospital they used in their research or in other words, how they classified the short term hospitals.
+
+## 3.
+
+```{python}
+
+file_path = (r"C:\Users\shefo\GitHub\problem-set-4-serhat-ian\pos2017.csv")
+df = pd.read_csv(file_path)
+pos2017  = df[(df["PRVDR_CTGRY_SBTYP_CD"]==1) & (df["PRVDR_CTGRY_CD"]==1)]
+
+file_path = (r"C:\Users\shefo\GitHub\problem-set-4-serhat-ian\pos2018.csv")
+df = pd.read_csv(file_path)
+pos2018  = df[(df["PRVDR_CTGRY_SBTYP_CD"]==1) & (df["PRVDR_CTGRY_CD"]==1)]
+
+file_path = (r"C:\Users\shefo\GitHub\problem-set-4-serhat-ian\pos2019.csv")
+df = pd.read_csv(file_path)
+pos2019 = df[(df["PRVDR_CTGRY_SBTYP_CD"]==1) & (df["PRVDR_CTGRY_CD"]==1)]
+
+pos2016["Year"] = 2016
+pos2017["Year"] = 2017
+pos2018["Year"] = 2018
+pos2019["Year"] = 2019
+
+pos2016["ZIP_CD"] = pos2016["ZIP_CD"].astype(int).astype(str)
+pos2017["ZIP_CD"] = pos2017["ZIP_CD"].astype(int).astype(str)
+pos2018["ZIP_CD"] = pos2018["ZIP_CD"].astype(int).astype(str)
+pos2019["ZIP_CD"] = pos2019["ZIP_CD"].astype(int).astype(str)
+
+
+combined_df = pd.concat([pos2016, pos2017, pos2018, pos2019], ignore_index=True)
+
+```
+
+```{python}
+
+import altair as alt
+
+num_hospitals_per_year = combined_df.groupby("Year").size().reset_index(name="Count")
+print(num_hospitals_per_year)
+
+
+alt.Chart(num_hospitals_per_year).mark_bar().encode(
+  x=alt.X("Year:O", title="Year"),
+  y=alt.Y("Count:Q", title="Short Term Hospital Number")
+)
+
+```
+
+## 4.
+
+### (a)
+
+```{python}
+unique_hospitals_per_year = combined_df.groupby("Year")["PRVDR_NUM"].nunique().reset_index(name="Unique_Hospitals")
+print(unique_hospitals_per_year)
+alt.Chart(unique_hospitals_per_year).mark_bar().encode(
+    x=alt.X("Year:O", title="Year"),
+    y=alt.Y("Unique_Hospitals:Q", title="Short Term Hospital Number")
+   )
+```
+
