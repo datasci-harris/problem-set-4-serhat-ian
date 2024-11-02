@@ -172,46 +172,81 @@ print(closed_hospitals[['FAC_NAME', 'PRVDR_NUM', 'ZIP_CD', 'Year_Closed']].sort_
 
 ## 3
 
+## 3.
+
 ```{python}
-def is_merger_or_acquisition(zip_code, closure_year):
+
+
+active_2016 = pos2016[(pos2016["PRVDR_CTGRY_CD"] == 1) & (pos2016["PRVDR_CTGRY_SBTYP_CD"] == 1) & (pos2016["PGM_TRMNTN_CD"] == 0)]
+active_2017 = pos2017[(pos2017["PRVDR_CTGRY_CD"] == 1) & (pos2017["PRVDR_CTGRY_SBTYP_CD"] == 1) & (pos2017["PGM_TRMNTN_CD"] == 0)]
+active_2018 = pos2018[(pos2018["PRVDR_CTGRY_CD"] == 1) & (pos2018["PRVDR_CTGRY_SBTYP_CD"] == 1) & (pos2018["PGM_TRMNTN_CD"] == 0)]
+active_2019 = pos2019[(pos2019["PRVDR_CTGRY_CD"] == 1) & (pos2019["PRVDR_CTGRY_SBTYP_CD"] == 1) & (pos2019["PGM_TRMNTN_CD"] == 0)]
+
+closed_in_2017 = active_2016[active_2016["PRVDR_NUM"].isin(active_2017["PRVDR_NUM"]) == False].copy()
+closed_in_2017["Year_Closed"] = 2017
+
+closed_in_2018 = active_2016[(active_2016["PRVDR_NUM"].isin(active_2017["PRVDR_NUM"]) == True) &
+                             (active_2016["PRVDR_NUM"].isin(active_2018["PRVDR_NUM"]) == False)].copy()
+closed_in_2018["Year_Closed"] = 2018
+
+closed_in_2019 = active_2016[(active_2016["PRVDR_NUM"].isin(active_2018["PRVDR_NUM"]) == True) &
+                             (active_2016["PRVDR_NUM"].isin(active_2019["PRVDR_NUM"]) == False)].copy()
+closed_in_2019["Year_Closed"] = 2019
+
+
+closures_df = pd.concat([closed_in_2017, closed_in_2018, closed_in_2019], ignore_index=True)
+
+
+def is_potential_merger(row, active_hospitals_by_year):
+    zip_code = row["ZIP_CD"]
+    year_closed = row["Year_Closed"]
+    next_year = year_closed + 1
     
-    closure_year = int(closure_year)
     
-    active_current_year = globals()[f'active_{closure_year}']
-    num_active_current = len(active_current_year[(active_current_year['ZIP_CD'] == zip_code) &
-                                                 (active_current_year['PGM_TRMNTN_CD'] == 0)])
-
-    # Count active hospitals in the ZIP code for the year following closure
-    next_year = closure_year + 1
-    if next_year <= 2019:
-        active_next_year = globals()[f'active_{next_year}']
-        num_active_next = len(active_next_year[(active_next_year['ZIP_CD'] == zip_code) &
-                                               (active_next_year['PGM_TRMNTN_CD'] == 0)])
-    else:
-        num_active_next = 0  # No data beyond 2019
-
-    # Merger/acquisition if the number of active hospitals does not decrease
-    return num_active_next >= num_active_current
+    if str(next_year) in active_hospitals_by_year:
+       
+        current_count = active_hospitals_by_year[str(year_closed)].loc[active_hospitals_by_year[str(year_closed)]["ZIP_CD"] == zip_code].shape[0]
+        next_count = active_hospitals_by_year[str(next_year)].loc[active_hospitals_by_year[str(next_year)]["ZIP_CD"] == zip_code].shape[0]
+        
+        
+        return next_count >= current_count
+    return False
 
 
-closed_hospitals['Is_Merger'] = closed_hospitals.apply(
-    lambda row: is_merger_or_acquisition(row['ZIP_CD'], row['Year_Closed']), axis=1
-)
+active_hospitals_by_year = {
+    "2016": active_2016,
+    "2017": active_2017,
+    "2018": active_2018,
+    "2019": active_2019
+}
 
-mergers = closed_hospitals[closed_hospitals['Is_Merger']]
-corrected_closures = closed_hospitals[~closed_hospitals['Is_Merger']].reset_index(drop=True)
 
-#a
-print(f"Number of potential mergers/acquisitions: {len(mergers)}")
+closures_df["Is_Merger"] = closures_df.apply(is_potential_merger, axis=1, args=(active_hospitals_by_year,))
+potential_mergers_df = closures_df[closures_df["Is_Merger"] == True]
+confirmed_closures_df = closures_df[closures_df["Is_Merger"] == False]
 
-#b
-print(f"Number of corrected hospital closures: {len(corrected_closures)}")
 
-#c
-sorted_closures = corrected_closures.sort_values('FAC_NAME').reset_index(drop=True)
-print(sorted_closures[['FAC_NAME', 'PRVDR_NUM', 'ZIP_CD', 'Year_Closed']].head(10))
 
 ```
+
+### (a)
+
+```{python}
+print("Number of potential mergers/acquisitions:", len(potential_mergers_df))
+```
+
+### (b)
+
+```{python}
+print("Number of confirmed closures:", len(confirmed_closures_df))
+```
+
+### (c)
+
+```{python}
+print("Sample of confirmed closures:\n", confirmed_closures_df[["FAC_NAME", "ZIP_CD", "PRVDR_NUM", "Year_Closed"]].head(10))
+```
+
 
 # Download Census zip code shapefile (10 pt)
 
