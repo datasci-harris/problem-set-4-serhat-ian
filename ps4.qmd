@@ -1,14 +1,16 @@
 ---
 title: "Your Title"
 format: 
-  pdf:
-    keep-tex: true
-    # Use only necessary LaTeX packages and configurations
+  html:
+    keep-md: true
     include-in-header: 
        text: |
-         \usepackage{fvextra}
-         \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
-# Set global execution options for Quarto
+         <style>
+           .highlight pre {
+             white-space: pre-wrap;
+             word-break: break-word;
+           }
+         </style>
 execute:
   echo: true
   eval: true
@@ -16,11 +18,8 @@ execute:
   message: false
 include-before-body:
   text: |
-    \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
-      showspaces=false,
-      showtabs=false,
-      breaklines
-    }
+    <script>
+    </script>
 ---
 
 # Submission Steps (10 pts)
@@ -29,7 +28,7 @@ include-before-body:
     - Partner 1 (name and cnet ID): Serhat Seflek serhat@uchicago.edu
     - Partner 2 (name and cnet ID): Zixuan Lan zixuanlan@uchicago.edu
 3. Partner 1 will accept the `ps4` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. 
-4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*\SS\*\* \*\*\ZL\*\*
+4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: SS and LZ
 5. "I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  (1 point)
 6. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
 7. Knit your `ps4.qmd` to an PDF file to make `ps4.pdf`, 
@@ -135,6 +134,9 @@ alt.Chart(unique_hospitals_per_year).mark_bar().encode(
    )
 ```
 
+### (b)
+
+The graphs and numbers are identical. It suggests the hospitals are unique with their provider number
 
 # Identify hospital closures in POS file (15 pts) (*)
 
@@ -590,9 +592,10 @@ plt.show()
 ```
 
 # Reflecting on the exercise 
-#1
+
+## 1
 To improve accuracy for identifying hospital closures, we can cross check closures using multiple sources like financial reports, medical directories, and local news, rather than relying on one source which might have errors or outdated information. Tracking each hospital’s status over several years would also help to distinguish permanent closures from temporary ones, like those due to renovations or short term issues. Additionally, local government and community reports often gives valuable, up-to-date insight on medical resources in the area, which could help verify the actual status of hospitals. Together, these methods create a clearer and more reliable picture of hospital closures, avoiding misinterpretations due to single-year or single-source data.
 
-#2
+## 2
 Potential issues and limitations include data accuracy and delays; sometimes hospitals appear “closed” due to data entry errors or mergers, and a single source might miss important context, like whether a closure is temporary. Additionally, a 10-mile impact radius affects densely populated areas differently than rural ones, where fewer people may be impacted. Hospital size and services also vary, so the closure of a large hospital likely has a bigger effect than a small clinic. Finally, alternative hospitals are often overlooked; some areas have other nearby options, while in others, a closed hospital may be the only one available.
 To improve accuracy, we could cross-check closures with additional data sources, look for long-term trends to confirm permanent closures, and consult community or government reports. Adjusting the impact radius based on population density, considering hospital size and services, and assessing other nearby hospitals would also provide a more accurate view. A more nuanced model, like the Two-Step Floating Catchment Area method (2SFCA), which considers both distance and population density, could further refine the impact assessment.
