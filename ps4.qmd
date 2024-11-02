@@ -273,3 +273,88 @@ ax.axis("off")
 plt.show()
 
 ```
+
+
+##part 4
+```{python}
+import geopandas as gpd
+import matplotlib.pyplot as plt
+from shapely.geometry import Point
+import math
+from shapely.geometry import shape
+
+# Step 1: Load shapefile and confirm ZIP code prefixes
+texas_zip_prefixes = ["75", "76", "77", "78", "79"]
+
+# Load Texas shapefile with GeoPandas
+zip_gdf = gpd.read_file(shapefile_path)
+zip_gdf["ZCTA5"] = zip_gdf["ZCTA5"].astype(str)
+
+# Filter for Texas ZIP codes based on prefixes
+texas_zip_gdf = zip_gdf[zip_gdf["ZCTA5"].str.startswith(tuple(texas_zip_prefixes))]
+
+# Ensure ZIP code columns in both dataframes are strings and stripped of whitespace
+confirmed_closures_df["ZIP_CD"] = confirmed_closures_df["ZIP_CD"].astype(str).str.strip()
+texas_zip_gdf["ZCTA5"] = texas_zip_gdf["ZCTA5"].astype(str).str.strip()
+
+# Group directly affected ZIP codes and count closures
+directly_affected_zip_counts = confirmed_closures_df.groupby("ZIP_CD").size().reset_index(name="closure_count")
+
+# Step 2: Merge Texas ZIP codes with closure counts
+texas_zip_closures = texas_zip_gdf.merge(directly_affected_zip_counts, left_on="ZCTA5", right_on="ZIP_CD", how="left")
+texas_zip_closures["closure_count"] = texas_zip_closures["closure_count"].fillna(0)
+
+# Count the number of directly affected ZIP codes in Texas
+num_directly_affected = (texas_zip_closures["closure_count"] > 0).sum()
+print("Number of directly affected ZIP codes in Texas:", num_directly_affected)
+
+# Plot the choropleth map for directly affected ZIP codes
+fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+texas_zip_closures.plot(column="closure_count", cmap="OrRd", linewidth=0.8, ax=ax, edgecolor="0.8", legend=True)
+plt.title("Directly Affected Texas ZIP Codes by Hospital Closures (2016-2019)")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.show()
+
+# Step 3: Create a 10-mile buffer around directly affected ZIP codes
+buffer_distance_meters = 16093.4  # 10 miles in meters
+directly_affected_zips_gdf = gpd.GeoDataFrame(texas_zip_closures[texas_zip_closures["closure_count"] > 0], geometry="geometry")
+directly_affected_zips_gdf["geometry"] = directly_affected_zips_gdf["geometry"].buffer(buffer_distance_meters)
+
+# Step 4: Perform a spatial join to find indirectly affected ZIP codes
+indirectly_affected_zips = gpd.sjoin(texas_zip_gdf, directly_affected_zips_gdf, how="inner", predicate="intersects")
+
+# Remove duplicate columns after the join
+indirectly_affected_zips = indirectly_affected_zips.rename(columns={"ZCTA5_left": "ZCTA5"}).drop(columns=["ZCTA5_right"])
+
+# Exclude directly affected ZIP codes from indirectly affected ones
+indirectly_affected_zips = indirectly_affected_zips[~indirectly_affected_zips["ZCTA5"].isin(directly_affected_zips_gdf["ZCTA5"])]
+
+# Count the number of indirectly affected ZIP codes
+num_indirectly_affected = indirectly_affected_zips["ZCTA5"].nunique()
+print("Number of indirectly affected ZIP codes in Texas:", num_indirectly_affected)
+
+
+```
+
+```{python}
+
+# Start with all Texas ZIP codes as 'unaffected'
+texas_zip_gdf["closure_category"] = "Not Affected"
+
+# Mark directly affected ZIP codes
+texas_zip_gdf.loc[texas_zip_gdf["ZCTA5"].isin(directly_affected_zips_gdf["ZCTA5"]), "closure_category"] = "Directly Affected"
+
+# Mark indirectly affected ZIP codes (within 10 miles but not directly affected)
+texas_zip_gdf.loc[texas_zip_gdf["ZCTA5"].isin(indirectly_affected_zips["ZCTA5"]), "closure_category"] = "Indirectly Affected"
+
+# Plot the choropleth map with different colors for each category
+fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+texas_zip_gdf.plot(column="closure_category", cmap="viridis", linewidth=0.8, ax=ax, edgecolor="0.8", legend=True)
+plt.title("Texas ZIP Codes by Hospital Closure Impact (2016-2019)")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.show()
+
+```
+
