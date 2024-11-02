@@ -23,11 +23,21 @@ include-before-body:
     }
 ---
 
-**PS4:** Due Sat Nov 2 at 5:00PM Central. Worth 100 points.
+# Submission Steps (10 pts)
+1. This problem set is a paired problem set.
+2. Play paper, scissors, rock to determine who goes first. Call that person *Partner 1*.
+    - Partner 1 (name and cnet ID): Serhat Seflek serhat@uchicago.edu
+    - Partner 2 (name and cnet ID): Zixuan Lan zixuanlan@uchicago.edu
+3. Partner 1 will accept the `ps4` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. 
+4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*\SS\*\* \*\*\ZL\*\*
+5. "I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  (1 point)
+6. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
+7. Knit your `ps4.qmd` to an PDF file to make `ps4.pdf`, 
+    * The PDF should not be more than 25 pages. Use `head()` and re-size figures when appropriate. 
+8. (Partner 1): push  `ps4.qmd` and `ps4.pdf` to your github repo.
+9. (Partner 1): submit `ps4.pdf` via Gradescope. Add your partner on Gradescope.
+10. (Partner 1): tag your submission in Gradescope
 
-## Style Points (10 pts)
-
-## Submission Steps (10 pts)
 
 # Download and explore the Provider of Services (POS) file (10 pts)
 
@@ -126,7 +136,7 @@ alt.Chart(unique_hospitals_per_year).mark_bar().encode(
 ```
 
 
-## Identify hospital closures in POS file (15 pts) (*)
+# Identify hospital closures in POS file (15 pts) (*)
 
 ## 1
 
@@ -169,8 +179,6 @@ print(f"Number of suspected hospital closures: {len(closed_hospitals)}")
 print(closed_hospitals[['FAC_NAME', 'PRVDR_NUM', 'ZIP_CD', 'Year_Closed']].sort_values(by="FAC_NAME").head(10))
 
 ```
-
-## 3
 
 ## 3.
 
@@ -310,7 +318,9 @@ plt.show()
 ```
 
 
-##part 4
+# Calculate zip code's distance to the nearest hospital (20 pts)
+
+## 1.
 
 ```{python}
 
@@ -320,6 +330,7 @@ import fiona
 
 zip_features = []
 
+#My partner changed his path to my path, because I'm partner one and it should work on my computer too. 
 with fiona.open(r"C:\Users\shefo\GitHub\problem-set-4-serhat-ian\gz_2010_us_860_00_500k.shp") as src:
     for feature in src:
         zip_code = feature['properties']['ZCTA5']  
@@ -332,6 +343,7 @@ print("Dimensions of zips_all_centroids:", zips_all_centroids.shape)
 print("Columns in zips_all_centroids:", zips_all_centroids.columns)
 
 ```
+
 ## 2.
 
 ```{python}
@@ -355,14 +367,12 @@ print("Unique Texas + Bordering States ZIP codes:", zips_texas_borderstates_cent
 
 ```
 
+## 3
 ```{python}
 
-# Step 3: Create zips_withhospital_centroids Subset for ZIP Codes with Hospitals in 2016
-# Example hospital data for 2016 (replace with actual data)
 
 zips_with_hospitals_2016 = active_2016["ZIP_CD"].unique()
 
-# Filter Texas and bordering states ZIP codes that have hospitals in 2016
 zips_withhospital_centroids = zips_texas_borderstates_centroids[zips_texas_borderstates_centroids["ZIP_CODE"].isin(zips_with_hospitals_2016)]
 print("Dimensions of zips_withhospital_centroids:", zips_withhospital_centroids.shape)
 ```
@@ -400,7 +410,6 @@ print("Estimated time for full procedure:", estimated_time_full, "seconds")
 ### (b)
 
 ```{python}
-
 
 # Full distance calculation for all Texas ZIP codes
 start_time = time.time()
@@ -485,3 +494,101 @@ plt.ylabel("Latitude")
 plt.show()
 
 ```
+
+# Effects of closures on access in Texas (15 pts)
+
+1. 
+```{python}
+
+texas_zip_prefixes = ["75", "76", "77", "78", "79"]
+
+texas_closures_df = confirmed_closures_df[confirmed_closures_df["ZIP_CD"].astype(str).str[:2].isin(texas_zip_prefixes)]
+
+closure_counts = texas_closures_df.groupby('ZIP_CD').size().reset_index(name='Closure_Count')
+
+print(closure_counts)
+
+```
+
+2. 
+
+```{python}
+
+zip_gdf["ZCTA5"] = zip_gdf["ZCTA5"].astype(str)
+texas_zip_prefixes = ["75", "76", "77", "78", "79"]
+texas_zip_gdf = zip_gdf[zip_gdf["ZCTA5"].str.startswith(tuple(texas_zip_prefixes))]
+
+
+texas_closure_geo = texas_zip_gdf.merge(closure_counts, left_on="ZCTA5", right_on = "ZIP_CD", how="left")
+texas_closure_geo['Closure_Count'] = texas_closure_geo['Closure_Count'].fillna(0)
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+
+texas_closure_geo.plot(
+    column='Closure_Count',   
+    cmap='OrRd',               
+    linewidth=0.8,             
+    ax=ax,                     
+    edgecolor='0.8',           
+    legend=True                
+)
+ax.set_title("Texas ZIP Codes Directly Affected by Hospital Closures (2016-2019)")
+ax.set_axis_off()  
+plt.show()
+```
+
+
+3. 
+```{python}
+texas_closure_geo = texas_closure_geo.to_crs(epsg=3395)  # Using EPSG:3395 as an example (meters)
+texas_zip_gdf = texas_zip_gdf.to_crs(texas_closure_geo.crs)
+
+# Step 1: Filter directly affected ZIP codes (those with Closure_Count > 0)
+directly_affected_zips = texas_closure_geo[texas_closure_geo['Closure_Count'] > 0]
+
+# Step 2: Create a 10-mile buffer around each directly affected ZIP code (10 miles ≈ 16093.4 meters)
+directly_affected_zips['buffer'] = directly_affected_zips.geometry.buffer(16093.4)
+
+# Step 3: Convert buffered areas to a new GeoDataFrame
+buffered_zips = gpd.GeoDataFrame(directly_affected_zips[['ZIP_CD', 'buffer']], 
+                                 geometry='buffer', 
+                                 crs=directly_affected_zips.crs)
+
+# Step 4: Perform spatial join to find ZIP codes within the buffer area
+# Ensure texas_zip_gdf has geometries of all Texas ZIP codes
+indirectly_affected_zips = gpd.sjoin(texas_zip_gdf, buffered_zips, how='inner', predicate='intersects')
+
+# Step 5: Get unique ZIP codes and count them
+indirectly_affected_zips_list = indirectly_affected_zips[['ZIP_CD']].drop_duplicates().reset_index(drop=True)
+indirectly_affected_count = indirectly_affected_zips_list['ZIP_CD'].nunique()
+
+# Output results
+print("Number of indirectly affected ZIP codes:", indirectly_affected_count)
+print("List of indirectly affected ZIP codes:\n", indirectly_affected_zips_list)
+
+
+```
+
+4. 
+```{python}
+# Start with all Texas ZIP codes as 'unaffected'
+texas_zip_gdf["closure_category"] = "Not Affected"
+
+# Mark directly affected ZIP codes
+texas_zip_gdf.loc[texas_zip_gdf["ZCTA5"].isin(directly_affected_zips["ZCTA5"]), "closure_category"] = "Directly Affected"
+
+# Mark indirectly affected ZIP codes (within 10 miles but not directly affected)
+texas_zip_gdf.loc[texas_zip_gdf["ZCTA5"].isin(indirectly_affected_zips["ZCTA5"]), "closure_category"] = "Indirectly Affected"
+
+# Plot the choropleth map with different colors for each category
+fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+texas_zip_gdf.plot(column="closure_category", cmap="viridis", linewidth=0.8, ax=ax, edgecolor="0.8", legend=True)
+plt.title("Texas ZIP Codes by Hospital Closure Impact (2016-2019)")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.show()
+```
+
+# Reflecting on the exercise 
+
+To improve accuracy for identifying hospital closures, we can cross check closures using multiple sources like financial reports, medical directories, and local news, rather than relying on one source which might have errors or outdated information. Tracking each hospital’s status over several years would also help to distinguish permanent closures from temporary ones, like those due to renovations or short term issues. Additionally, local government and community reports often gives valuable, up-to-date insight on medical resources in the area, which could help verify the actual status of hospitals. Together, these methods create a clearer and more reliable picture of hospital closures, avoiding misinterpretations due to single-year or single-source data.
